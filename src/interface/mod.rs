@@ -4,8 +4,8 @@ use crate::engine::element;
 use rand::Rng;
 
 const BACKGROUND_COLOR: Color = Color::RGB(0, 0, 0);
-const CELL_SIZE: usize = 8;
-const CURSOR_SIZE: i32 = 1;
+const CELL_SIZE: usize = 10;
+const CURSOR_SIZE: i32 = 3;
 
 pub fn varyColor(color: Color) -> Color {
     // vary color by 10%
@@ -43,7 +43,7 @@ const DrawableList: [element::ElementType; 2] = [
 impl Interface {
     pub fn run(mut engine_: Engine)  {
         let selected_index = 0;
-        let mut selected_element = DrawableList[selected_index%DrawableList.len()];
+        let mut selected_element = DrawableList[0];
 
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
         println!("{}", engine_.buffer.elements.len());
@@ -60,7 +60,7 @@ impl Interface {
         let mut event_pump = sdl.event_pump().expect("Failed to create event pump");
         // create a grid texture
 
-
+        engine_.buffer.draw_walls();
         loop {
             engine_.buffer.set(300, 300, element::ElementType::Dust);
             for event in event_pump.poll_iter() {
@@ -84,9 +84,7 @@ impl Interface {
             canvas.clear();
             
             // paint the buffer
-            let mouse_state = event_pump.mouse_state();
-            let mouse_x = mouse_state.x();
-            let mouse_y = mouse_state.y();
+           
             for y in (0..canvas.viewport().height()-1).rev() {
                 for x in 0..canvas.viewport().width() {
                     let element = engine_.buffer.get(x as usize, y as usize);
@@ -104,20 +102,16 @@ impl Interface {
                 }
             }
 
+            let mouse_state = event_pump.mouse_state();
+            let mouse_x = mouse_state.x();
+            let mouse_y = mouse_state.y();
             if mouse_state.left() {
                 if is_in_window(mouse_x, mouse_y, 800, 600) {
-                    // draw multiple particles at once to make it look like a spray
-                    // offset 5 pixels in each direction from the mouse
-                    for x in mouse_x-CURSOR_SIZE..mouse_x+CURSOR_SIZE {
-                        for y in mouse_y-CURSOR_SIZE..mouse_y+CURSOR_SIZE {
-                            if is_in_window(x, y, 800, 600) {
-                            engine_.buffer.set(x as usize, y as usize, selected_element);
-                            }
-                        }
-                        
+                    engine_.buffer.set(mouse_x as usize / CELL_SIZE, mouse_y as usize / CELL_SIZE, selected_element);
+                    println!("Set element at {}, {}", mouse_x as usize/ CELL_SIZE, mouse_y as usize / CELL_SIZE);
                     }
                     
-                }
+                
             }
             canvas.set_draw_color(Color::RGB(255, 0, 0));
             // draw a cursor

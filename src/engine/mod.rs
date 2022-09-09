@@ -23,11 +23,10 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    const cellSize: usize = 5;
     const WIDTH: usize = 800;
     const HEIGHT: usize = 600;
     
-    const SIZE: usize = Self::WIDTH * Self::HEIGHT * 3;
+    const SIZE: usize = Self::WIDTH * Self::HEIGHT;
     
     fn new() -> Self {
        Self {
@@ -47,7 +46,7 @@ impl Buffer {
     }
 
     pub fn set(&mut self, x: usize, y: usize, element: ElementType) {
-        self.elements[x + y * Self::HEIGHT] = element;
+        self.elements[x + y * Self::WIDTH] = element;
     }
 
     pub fn is_cell_free(&self, x: usize, y: usize) -> bool {
@@ -66,6 +65,22 @@ impl Buffer {
     pub fn clear(&mut self) {
         self.elements = vec![ElementType::Empty; Self::SIZE];
     }
+
+
+    pub fn draw_walls(&mut self) {
+        for x in 0..Self::WIDTH/5 {
+            self.set(x, 0, ElementType::Wall);
+            self.set(x, Self::HEIGHT - 1, ElementType::Wall);
+        }
+        for y in 0..Self::HEIGHT/5 {
+            self.set(0, y, ElementType::Wall);
+            self.set(Self::WIDTH - 1, y, ElementType::Wall);
+        }
+    }
+
+    pub fn is_empty(&self, index: usize) -> bool {
+        self.elements[index] == ElementType::Empty
+    }
     pub fn draw(&mut self) {
         // draw the ground
         for y in Self::HEIGHT-10..Self::HEIGHT {
@@ -73,8 +88,6 @@ impl Buffer {
                 self.set(x, y, ElementType::Wall);
             }
         }
-
-        let check_left_first: bool = rand::thread_rng().gen();
 
         for y in (0..Self::HEIGHT-1).rev() {
             for x in 0..Self::WIDTH {
@@ -85,41 +98,10 @@ impl Buffer {
                 }
                 
                 // check if bottom is empty, then move down
-                if  self.is_cell_free(x, y + 1) {
-                    self.set(x, y, ElementType::Empty);
-                    self.set(x, y + 1, element);
+                if self.is_cell_free(x, y+1) {
+                    self.swap(x, y, x, y+1);
                     continue;
                 }
-              
-                if check_left_first {
-                      // if bottom is not free, check if bottom left corner is empty
-                    if self.is_cell_free(x-1, y+1) {
-                        self.set(x, y, ElementType::Empty);
-                        self.set(x-1, y+1, element);
-                        continue;
-                    }
-                    // if bottom left corner is not empty, check bottom right corner
-                    else if self.is_cell_free(x+1, y+1) {
-                        self.set(x, y, ElementType::Empty);
-                        self.set(x+1, y+1, element);
-                        continue;
-                    }
-                }
-                else {
-                      // if bottom left corner is not empty, check bottom right corner
-                    if self.is_cell_free(x+1, y+1) {
-                        self.set(x, y, ElementType::Empty);
-                        self.set(x+1, y+1, element);
-                        continue;
-                    }
-                    // if bottom is not free, check if bottom left corner is empty
-                    else if self.is_cell_free(x-1, y+1) {
-                        self.set(x, y, ElementType::Empty);
-                        self.set(x-1, y+1, element);
-                        continue;
-                    }
-                }
-            
 
                     continue;
                 }
