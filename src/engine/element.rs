@@ -1,13 +1,14 @@
 use sdl2::pixels::Color;
 #
 [derive(Default, Clone, Copy)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ElementType {
     #[default]
     Empty,
     Wall,
     Dust
 }
+
 
 pub struct Element {
     name: String,
