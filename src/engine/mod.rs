@@ -24,7 +24,7 @@ impl Cell {
     pub fn new(species: Species) -> Cell {
         Cell {
             species: species,
-            ra: 0,
+            ra: 100 + rand::random::<u8>() % 100,
             rb: 0,
             clock: 0,
         }

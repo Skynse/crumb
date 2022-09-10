@@ -37,9 +37,10 @@ fn rand_dir() -> i32 {
 }
 
 pub fn update_dust(cell: Cell, mut api: Api) {
-    let dx = api.rand_dir_2();
+    let dx = rand_dir();
 
-    let nbr = api.get(0, 1);
+    /** */
+    let nbr = api.get(1, 0);
     if nbr.species == Species::Empty {
         api.set(0, 0, EMPTY_CELL);
         api.set(0, 1, cell);
