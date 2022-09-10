@@ -1,7 +1,8 @@
 use std::default;
 
-use crate::engine::element;
-use crate::engine::Engine;
+use crate::engine::{Engine, species, Cell};
+
+use species::Species;
 
 pub mod defaults;
 
@@ -39,13 +40,11 @@ pub struct Interface {
     engine: Engine,
 }
 
-const DrawableList: [element::ElementType; 2] =
-    [element::ElementType::Dust, element::ElementType::Wall];
 
 impl Interface {
     pub fn run(mut engine_: Engine) {
         let selected_index = 0;
-        let mut selected_element = DrawableList[0];
+        let selected_cell = Cell::new(species::Species::Dust);
         let mut cursor_size = 3;
         
 
@@ -80,7 +79,7 @@ impl Interface {
                         keycode: Some(sdl2::keyboard::Keycode::C),
                         ..
                     } => {
-                        engine_.buffer.clear();
+                        engine_.world.clear();
                     }
                     sdl2::event::Event::MouseWheel { y, .. } => {
                         if y > 0 {
@@ -95,15 +94,16 @@ impl Interface {
             canvas.set_draw_color(BACKGROUND_COLOR);
             canvas.clear();
 
-            // paint the buffer
+            // paint the world
             for y in (0..canvas.viewport().height() - 1).rev() {
                 for x in 0..canvas.viewport().width() {
-                    let element = engine_.buffer.get(x as usize, y as usize);
-                    let color = match element {
-                        element::ElementType::Empty => Color::RGB(0, 0, 0),
-                        element::ElementType::Dust => varyColor(Color::RGB(255, 230, 224)),
-                        element::ElementType::Wall => Color::RGB(160, 50, 50),
+                    let cell = engine_.world.get(x as usize, y as usize);
+                    let color = match cell.get_species() {
+                        Species::Empty => Color::RGB(0, 0, 0),
+                        Species::Wall => Color::RGB(255, 255, 255),
+                        species::Species::Dust => varyColor(Color::RGB(255, 240, 230)),
                     };
+                    
 
                     canvas.set_draw_color(color);
                     // draw a pixel using rect
@@ -126,15 +126,15 @@ impl Interface {
                     for y in 0..cursor_size {
                         for x in 0..cursor_size {
                             // draw to the center of the cursor
-                            engine_.buffer.set(
+                            engine_.world.set(
                                 (mouse_x / CELL_SIZE as i32) as usize + x,
                                 (mouse_y / CELL_SIZE as i32) as usize + y,
-                                selected_element,
+                                selected_cell,
                             );
                         }
                     }
                     println!(
-                        "Set element at {}, {}",
+                        "Set cell at {}, {}",
                         mouse_x as usize / CELL_SIZE,
                         mouse_y as usize / CELL_SIZE
                     );
@@ -151,7 +151,7 @@ impl Interface {
                 ))
                 .expect("Failed to draw cursor");
 
-            engine_.buffer.draw();
+            engine_.world.tick();
             canvas.present();
         }
     }
