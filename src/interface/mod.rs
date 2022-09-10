@@ -101,7 +101,11 @@ impl Interface {
                     let color = match cell.get_species() {
                         Species::Empty => Color::RGB(0, 0, 0),
                         Species::Wall => Color::RGB(255, 255, 255),
-                        species::Species::Dust => varyColor(Color::RGB(255, 240, 230)),
+                        Species::Dust => varyColor(Color::RGB(255, 200, 230)),
+                        Species::Sand => varyColor(Color::RGB(255, 200, 100)),
+                        Species::Water => varyColor(Color::RGB(100, 100, 255)),
+                        Species::Gas => varyColor(Color::RGB(255, 255, 255)),
+                        Species::Oil => varyColor(Color::RGB(255, 100, 0)),
                     };
                     
 
