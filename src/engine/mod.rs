@@ -1,11 +1,18 @@
 pub mod element;
+use super::interface::defaults;
+
 use rand::Rng;
 
 use element::ElementType;
-use sdl2::{sys::{rand, random}, pixels::Color};
+use sdl2::{
+    pixels::Color,
+    sys::{rand, random},
+};
+
+use self::element::Element;
 
 pub struct Engine {
-   pub buffer: Buffer,
+    pub buffer: Buffer,
 }
 
 impl Engine {
@@ -14,24 +21,30 @@ impl Engine {
             buffer: Buffer::new(),
         }
     }
-
 }
 
 #[derive(Default)]
 pub struct Buffer {
     pub elements: Vec<ElementType>,
+    pub air_pressure: f32,
+    pub air_density: f32,
+    pub air_temperature: f32,
+    pub air_direction: f32,
 }
-
 impl Buffer {
-    const WIDTH: usize = 800;
-    const HEIGHT: usize = 600;
-    
+    const WIDTH: usize = defaults::WIDTH;
+    const HEIGHT: usize = defaults::HEIGHT;
+
     const SIZE: usize = Self::WIDTH * Self::HEIGHT;
-    
+
     fn new() -> Self {
-       Self {
-           elements: vec![ElementType::Empty; Self::SIZE],
-       }
+        Self {
+            elements: vec![ElementType::Empty; Self::SIZE],
+            air_pressure: 0.0,
+            air_density: 0.0,
+            air_temperature: 0.0,
+            air_direction: -1.0,
+        }
     }
 
     pub fn get(&self, x: usize, y: usize) -> ElementType {
@@ -66,45 +79,43 @@ impl Buffer {
         self.elements = vec![ElementType::Empty; Self::SIZE];
     }
 
-
-    pub fn draw_walls(&mut self) {
-        for x in 0..Self::WIDTH/5 {
-            self.set(x, 0, ElementType::Wall);
-            self.set(x, Self::HEIGHT - 1, ElementType::Wall);
-        }
-        for y in 0..Self::HEIGHT/5 {
-            self.set(0, y, ElementType::Wall);
-            self.set(Self::WIDTH - 1, y, ElementType::Wall);
-        }
-    }
-
     pub fn is_empty(&self, index: usize) -> bool {
         self.elements[index] == ElementType::Empty
     }
     pub fn draw(&mut self) {
-        // draw the ground
-        for y in Self::HEIGHT-10..Self::HEIGHT {
-            for x in 0..Self::WIDTH {
-                self.set(x, y, ElementType::Wall);
-            }
+        // draw the walls
+        for y in 0..Self::HEIGHT {
+            self.set(0, y / 3, ElementType::Wall);
+            self.set((Self::WIDTH - 1) / 3, y / 3, ElementType::Wall);
         }
 
-        for y in (0..Self::HEIGHT-1).rev() {
+        // draw the ceiling
+        for x in 0..Self::WIDTH {
+            self.set(x / 3, 0, ElementType::Wall);
+        }
+
+        // draw the floor
+        for x in 0..Self::WIDTH {
+            self.set(x / 3, (Self::HEIGHT - 1) / 3, ElementType::Wall);
+        }
+
+        let dir: i32 = if rand::thread_rng().gen() { 1 } else { -1 };
+        for y in (0..Self::HEIGHT - 1).rev() {
             for x in 0..Self::WIDTH {
-                
                 let element = self.get(x, y);
                 if element == ElementType::Empty || element == ElementType::Wall {
                     continue;
                 }
-                
-                // check if bottom is empty, then move down
-                if self.is_cell_free(x, y+1) {
-                    self.swap(x, y, x, y+1);
-                    continue;
+
+                if self.get(x, y) != ElementType::Wall || self.get(x, y) != ElementType::Empty {
+                    if self.get(x, y + 1) == ElementType::Empty {
+                        self.swap(x, y, x, y + 1);
+                    } else if self.get((x as i32 + dir as i32) as usize, y) == ElementType::Empty {
+                        self.swap(x, y, (x as i32 + dir as i32) as usize, y + 1);
+                    }
                 }
 
-                    continue;
-                }
             }
         }
     }
+}

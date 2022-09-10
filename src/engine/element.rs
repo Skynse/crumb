@@ -1,20 +1,18 @@
 use sdl2::pixels::Color;
-#
-[derive(Default, Clone, Copy)]
-#[derive(PartialEq, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub enum ElementType {
     #[default]
     Empty,
     Wall,
-    Dust
+    Dust,
 }
-
 
 pub struct Element {
     name: String,
     element_type: ElementType,
     color: Color,
     gravity: f32,
+    static_: u32,
 
     flammable: bool,
     explosive: bool,
@@ -23,9 +21,8 @@ pub struct Element {
 
     air_drag: f32,
     air_loss: f32,
-    
-    weight: f32,
 
+    weight: f32,
 }
 
 impl Element {
@@ -36,6 +33,7 @@ impl Element {
                 element_type,
                 color: Color::RGB(0, 0, 0),
                 gravity: 0.0,
+                static_: 0,
                 flammable: false,
                 explosive: false,
                 meltable: false,
@@ -49,6 +47,7 @@ impl Element {
                 element_type,
                 color: Color::RGB(240, 230, 255),
                 gravity: 0.0,
+                static_: 0,
                 flammable: true,
                 explosive: false,
                 meltable: false,
@@ -62,6 +61,7 @@ impl Element {
                 element_type,
                 color: Color::RGB(10, 10, 10),
                 gravity: 0.0,
+                static_: 0,
                 flammable: false,
                 explosive: false,
                 meltable: false,
