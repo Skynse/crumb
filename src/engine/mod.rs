@@ -1,16 +1,15 @@
-
 use std::usize;
 
 use crate::interface::defaults::{UI_X, UI_Y};
 
 use super::interface::defaults;
 pub mod species;
-use species::Species;
 use rand::{Rng, SeedableRng};
+use species::Species;
 
 use rand_xoshiro::SplitMix64;
 
-#[derive(Clone, Copy, Debug, Default, )]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Cell {
     species: Species,
     pub ra: u8,
@@ -50,13 +49,12 @@ impl Cell {
     }
 }
 
-static EMPTY_CELL : Cell = Cell{
+static EMPTY_CELL: Cell = Cell {
     species: Species::EMPT,
     ra: 0,
     rb: 0,
     clock: 0,
     temperature: 22.0,
-
 };
 pub struct Engine {
     pub world: World,
@@ -73,7 +71,7 @@ pub struct Wind {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            world: World::new(defaults::WIDTH-UI_X, defaults::HEIGHT-UI_Y),
+            world: World::new(defaults::WIDTH - UI_X, defaults::HEIGHT - UI_Y),
         }
     }
 }
@@ -86,7 +84,6 @@ pub struct World {
     generation: u8,
     burns: Vec<Wind>,
     rng: SplitMix64,
-
 }
 
 pub struct Api<'a> {
@@ -96,7 +93,6 @@ pub struct Api<'a> {
 }
 
 impl<'a> Api<'a> {
-
     pub fn rand_int(&mut self, n: i32) -> i32 {
         self.world.rng.gen_range(0..n)
     }
@@ -105,7 +101,7 @@ impl<'a> Api<'a> {
         let i = self.rand_int(1000);
         (i % 3) - 1
     }
-    
+
     pub fn once_in(&mut self, n: i32) -> bool {
         self.rand_int(n) == 0
     }
@@ -134,9 +130,8 @@ impl<'a> Api<'a> {
     }
 
     pub fn get(&mut self, dx: i32, dy: i32) -> Cell {
-
         let nx = self.x.wrapping_add(dx as usize);
-        let ny = self.y + dy as usize;
+        let ny = self.y.wrapping_add(dy as usize);
         self.world.get(nx, ny)
     }
     pub fn set(&mut self, dx: i32, dy: i32, v: Cell) {
@@ -144,7 +139,7 @@ impl<'a> Api<'a> {
             panic!("oob set");
         }
         let nx = self.x.wrapping_add(dx as usize);
-        let ny = self.y + dy as usize;
+        let ny = self.y.wrapping_add(dy as usize);
 
         if nx < 0 || nx > self.world.width - 1 || ny < 0 || ny > self.world.height - 1 {
             return;
@@ -166,7 +161,6 @@ impl<'a> Api<'a> {
 }
 
 impl World {
-    
     fn blow_wind(cell: Cell, wind: Wind, mut api: Api) {
         if cell.clock - api.world.generation == 1 {
             return;
@@ -210,8 +204,7 @@ impl World {
             api.set(0, 0, EMPTY_CELL);
             if dy == -1
                 && api.get(dx, -2).species == Species::EMPT
-                && (cell.species == Species::SAND
-                    || cell.species == Species::WATR)
+                && (cell.species == Species::SAND || cell.species == Species::WATR)
             {
                 dy = -2;
             }
@@ -219,32 +212,46 @@ impl World {
             return;
         }
     }
-        fn update_cell(cell: Cell, api: Api) {
-            if cell.clock == api.world.generation {
-                return;
-            }
-            cell.update(api);
+    fn update_cell(cell: Cell, api: Api) {
+        if cell.clock == api.world.generation {
+            return;
         }
+        cell.update(api);
     }
+}
 
 impl World {
     pub fn new(width: usize, height: usize) -> World {
         let rng: SplitMix64 = SeedableRng::seed_from_u64(0x734f6b89de5f83cc);
         World {
-            width: (width/2) + UI_X,
-            height: (height/2) - UI_Y,
+            width: (width / 2) + UI_X,
+            height: (height / 2) - UI_Y,
             cells: vec![Cell::new(Species::EMPT); defaults::WIDTH * defaults::HEIGHT],
-            winds: vec![Wind{dx: 0, dy: 0, pressure: 0, density: 0}; defaults::WIDTH * defaults::HEIGHT],
+            winds: vec![
+                Wind {
+                    dx: 0,
+                    dy: 0,
+                    pressure: 0,
+                    density: 0
+                };
+                defaults::WIDTH * defaults::HEIGHT
+            ],
             generation: 0,
-            burns: vec![Wind{dx: 0, dy: 0, pressure: 0, density: 0}; defaults::WIDTH * defaults::HEIGHT],
+            burns: vec![
+                Wind {
+                    dx: 0,
+                    dy: 0,
+                    pressure: 0,
+                    density: 0
+                };
+                defaults::WIDTH * defaults::HEIGHT
+            ],
             rng,
-
         }
     }
     fn get_index(&self, x: usize, y: usize) -> usize {
         x + y * self.width as usize
     }
-    
 
     fn get_cell(&self, x: usize, y: usize) -> Cell {
         let i = self.get_index(x, y);
@@ -263,11 +270,13 @@ impl World {
     }
 
     pub fn clear(&mut self) {
-        self.cells = vec![EMPTY_CELL; self.width as usize * self.height as usize];
+        for i in 0..self.cells.len() {
+            self.cells[i] = EMPTY_CELL;
+        }
     }
     pub fn tick(&mut self) {
         // called every SDL frame
-        /* 
+        /*
         for x in 0..self.width {
             for y in 0..self.height {
                 let cell = self.get_cell(x, y);
@@ -285,15 +294,15 @@ impl World {
         }
         */
         self.generation = self.generation.wrapping_add(1);
-        
-        for x in 0..self.width-1 {
+
+        for x in 0..self.width - 1 {
             let scanx = if self.generation % 2 == 0 {
                 self.width - (1 + x)
             } else {
                 x
             };
 
-            for y in 0..self.height-1 {
+            for y in 0..self.height - 1 {
                 let idx = self.get_index(scanx, y);
                 let cell = self.get_cell(scanx, y);
 
@@ -312,4 +321,3 @@ impl World {
         self.generation = self.generation.wrapping_add(1);
     }
 }
-
