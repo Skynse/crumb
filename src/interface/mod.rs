@@ -40,7 +40,7 @@ pub struct Interface {
     engine: Engine,
 }
 // create an array of possible cell species for our selector
-const CELL_SPECIES: [Species; 9] = [
+const CELL_SPECIES: [Species; 10] = [
     Species::EMPT,
     Species::WALL,
     Species::DUST,
@@ -50,6 +50,7 @@ const CELL_SPECIES: [Species; 9] = [
     Species::GAS,
     Species::OIL,
     Species::SMKE,
+    Species::GOL,
 ];
 
 impl Interface {
@@ -98,11 +99,8 @@ impl Interface {
         
 
         let mut event_pump = sdl.event_pump().expect("Failed to create event pump");
-
         // start game loop
-
         loop {
-            
             for event in event_pump.poll_iter() {
                 match event {
                     // when number keys are pressed, change the selected cell
@@ -132,6 +130,20 @@ impl Interface {
                             selected_index = 6;
                         }
 
+                        sdl2::keyboard::Keycode::Num8 => {
+                            selected_index = 7;
+                        }
+
+                        sdl2::keyboard::Keycode::Num9 => {
+                            selected_index = 8;
+                        }
+
+                        sdl2::keyboard::Keycode::Num0 => {
+                            selected_index = 9;
+                        }
+
+
+
                         // when spacebar is pressed, pause the simulation
                         sdl2::keyboard::Keycode::Space => {
                             paused = !paused;
@@ -148,12 +160,13 @@ impl Interface {
                                 cursor_size -= 1;
                             }
                         }
-
+                        
+                        sdl2::keyboard::Keycode::LCtrl => {
+                            println!("{:?}", event);
+                        }
                         sdl2::keyboard::Keycode::C => {
                             engine_.world.clear();
                         }
-
-
 
                         // when the escape key is pressed, quit the simulation
                         sdl2::keyboard::Keycode::Escape => {
@@ -173,9 +186,12 @@ impl Interface {
                     _ => {}
                 }
             }
+
+            let keyboard_state = event_pump.keyboard_state();
+ 
+
             canvas.set_draw_color(BACKGROUND_COLOR);
             canvas.clear();
-
 
             // paint the world 
             for y in (0..canvas.viewport().height() - UI_Y as u32).rev() {
@@ -191,6 +207,11 @@ impl Interface {
                         Species::OIL => varyColor(Color::RGB(255, 100, 0)),
                         Species::FIRE => varyColor(Color::RGB(255, 120, 0)),
                         Species::SMKE => varyColor(Color::RGB(100, 100, 100)),
+                        Species::GOL => match cell.rb {
+                            // check if cell is alive or dead when ra  is 1
+                            1 => varyColor(Color::RGB(255, 255, 255)),
+                            _ => varyColor(Color::RGB(0, 0, 0)),
+                        },
                     };
                     
 

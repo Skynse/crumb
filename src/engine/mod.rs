@@ -27,13 +27,20 @@ impl Cell {
         } else {
             22.0
         };
+
+        let rb = if species == Species::GOL {
+            1
+        } else {
+            0
+        };
         Cell {
             species: species,
             ra: 100 + rand::random::<u8>() % 100,
-            rb: 0,
+            rb: rb,
             clock: 0,
             temperature: temperature,
         }
+        
     }
 
     pub fn get_species(&self) -> Species {

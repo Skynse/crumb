@@ -13,6 +13,7 @@ pub enum Species {
     OIL = 6,
     FIRE = 7,
     SMKE = 8,
+    GOL = 9,
 }
 
 impl Species {
@@ -27,6 +28,7 @@ impl Species {
             Species::OIL => todo!(),
             Species::FIRE => update_fire(cell, api),
             Species::SMKE => update_smoke(cell, api),
+            Species::GOL => update_gol(cell, api),
         }
     }
 }
@@ -145,7 +147,7 @@ pub fn update_fire(cell: Cell, mut api: Api) {
                 ra: 0,
                 rb: 0,
                 clock: 0,
-                temperature: cell.temperature + 1.0,
+                temperature: cell.temperature + 30.0,
                 ..Default::default()
             },
         );
@@ -211,4 +213,81 @@ pub fn update_smoke(cell: Cell, mut api: Api) {
     if cell.clock > 100 {
         api.set(0, 0, EMPTY_CELL);
     }
+}
+
+pub fn update_gol(cell: Cell, mut api: Api) {
+    let GOL_DEAD: Cell = Cell {
+        species: Species::GOL,
+        clock: 0,
+        temperature: 0.0,
+        ra: 0,
+        rb: 0,
+    };
+
+    let GOL_ALIVE: Cell = Cell {
+        species: Species::GOL,
+        clock: 0,
+        temperature: 0.0,
+        ra: 0,
+        rb: 1,
+    };
+    // get neighbors in all directions
+    let nb = api.get(0, 1);
+    let nt = api.get(0, -1);
+
+    let nr = api.get(1, 0);
+    let nl = api.get(-1, 0);
+    
+    let ntr = api.get(1, -1);
+    let nbr = api.get(1, 1);
+    
+    
+    let nbl = api.get(-1, 1);
+    let ntl = api.get(-1, -1);
+    
+    let mut neighbors = 0;
+    // check if neighbors are alive and neighbor is Species::GOL
+    if nb.species == Species::GOL && nb.rb == 1 {
+        neighbors += 1;
+    }
+    if nt.species == Species::GOL && nt.rb == 1 {
+        neighbors += 1;
+    }
+    if nr.species == Species::GOL && nr.rb == 1 {
+        neighbors += 1;
+    }
+    if nl.species == Species::GOL && nl.rb == 1 {
+        neighbors += 1;
+    }
+    if ntr.species == Species::GOL && ntr.rb == 1 {
+        neighbors += 1;
+    }
+    if nbr.species == Species::GOL && nbr.rb == 1 {
+        neighbors += 1;
+    }
+    if nbl.species == Species::GOL && nbl.rb == 1 {
+        neighbors += 1;
+    }
+    if ntl.species == Species::GOL && ntl.rb == 1 {
+        neighbors += 1;
+    }
+    // rb denotes if the cell is alive or dead
+    // 1 for alive, 0 for dead
+    if cell.rb == 1 {
+        if neighbors < 2 {
+            api.set(0, 0, GOL_DEAD);
+        } else if neighbors > 3 {
+            api.set(0, 0, GOL_DEAD);
+        } else {
+            api.set(0, 0, GOL_ALIVE);
+        }
+    } else {
+        if neighbors == 3 {
+            api.set(0, 0, GOL_ALIVE);
+        } else {
+            api.set(0, 0, GOL_DEAD);
+        }
+    }
+    
+
 }
