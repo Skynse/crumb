@@ -236,10 +236,17 @@ impl Interface {
 
             // print temperature of cell at mouse position
             let cell = engine_.world.get(mouse_x as usize, mouse_y as usize);
+            let viewport = canvas.viewport();
+            let vwidth = viewport.width();
+            let vheight = viewport.height();
             // use let binding to avoid borrowing issues
             let text = format!("{:?}, Temp: {} C",cell.get_species(), cell.get_temperature());
             
             draw_text(&mut canvas, &font, text.as_str(), (0) as i32,  (0) as i32);
+            
+
+            // draw selected cell at the end of the screen
+            draw_text(&mut canvas, &font, format!("{:?}", CELL_SPECIES[selected_index]).as_str(), vwidth as i32 - UI_X as i32, 0);
             
 
             if !paused {
