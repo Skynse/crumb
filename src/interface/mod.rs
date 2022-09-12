@@ -1,11 +1,13 @@
 use crate::engine::{Engine, species, Cell};
+use crate::interface::components::*;
 
 use species::Species;
 pub mod defaults;
+mod components;
 use rand::Rng;
 use sdl2::{mouse, pixels::Color, rect::Rect, render::Canvas};
 
-use self::defaults::{UI_X, UI_Y, WIDTH, HEIGHT};
+use self::{defaults::{UI_X, UI_Y, WIDTH, HEIGHT}, button::Button};
 
 const BACKGROUND_COLOR: Color = Color::RGB(0, 0, 0);
 const MAX_CURSOR_SIZE: usize = 50;
@@ -51,14 +53,26 @@ const CELL_SPECIES: [Species; 9] = [
 ];
 
 impl Interface {
+
+    
     pub fn run(mut engine_: Engine) {
+
         let mut selected_index = 2;
         let mut cursor_size = 3;
+
         let mut paused: bool = false;
+        // create a function pointer for pausing
+        let mut pause = || {
+            paused = !paused;
+        };
+
+        let ttf_context = sdl2::ttf::init().expect("Failed to initialize TTF");
+            let font = ttf_context
+                .load_font("./assets/FiraSans-Bold.ttf", 12)
+                .expect("Failed to load font");
 
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
         
-
         let mut canvas = {
             let video = sdl.video().expect("Failed to initialize video subsystem");
             let window = video
@@ -81,17 +95,14 @@ impl Interface {
             .create_texture_streaming(sdl2::pixels::PixelFormatEnum::RGB24, 1, 1)
             .expect("Failed to create texture");
     
+        
 
         let mut event_pump = sdl.event_pump().expect("Failed to create event pump");
 
         // start game loop
 
         loop {
-            let ttf_context = sdl2::ttf::init().expect("Failed to initialize TTF");
-            let font = ttf_context
-                .load_font("./assets/FiraSans-Bold.ttf", 12)
-                .expect("Failed to load font");
-
+            
             for event in event_pump.poll_iter() {
                 match event {
                     // when number keys are pressed, change the selected cell
@@ -141,6 +152,9 @@ impl Interface {
                         sdl2::keyboard::Keycode::C => {
                             engine_.world.clear();
                         }
+
+
+
                         // when the escape key is pressed, quit the simulation
                         sdl2::keyboard::Keycode::Escape => {
                             return;
@@ -161,6 +175,7 @@ impl Interface {
             }
             canvas.set_draw_color(BACKGROUND_COLOR);
             canvas.clear();
+
 
             // paint the world 
             for y in (0..canvas.viewport().height() - UI_Y as u32).rev() {
@@ -190,14 +205,16 @@ impl Interface {
             let mouse_state = event_pump.mouse_state();
             let mouse_x = mouse_state.x() /2;
             let mouse_y = mouse_state.y()/2;
+            let full_mouse: (i32, i32) = (mouse_x, mouse_y);
 
             if mouse_state.left() {
+
                 if is_in_window(mouse_x, mouse_y, (WIDTH) as i32, (HEIGHT) as i32) {
                     for y in 0..cursor_size {
                         for x in 0..cursor_size {
                             // draw to the center of the cursor
                             engine_.world.set(
-                                (mouse_x  as i32) as usize + x - cursor_size / 2,
+                                ((mouse_x  as i32) as usize + x).saturating_sub(cursor_size / 2),
                                 ((mouse_y as i32) as usize + y).saturating_sub(cursor_size / 2),
                                 Cell::new(CELL_SPECIES[selected_index]),
                             );
@@ -247,20 +264,4 @@ fn draw_text(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Font, t
             Rect::new(x, y, texture_query.width, texture_query.height),
         )
         .expect("Failed to copy texture");
-}
-
-fn button(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Font, text: &str, x: i32, y: i32, width: i32, height: i32, selected: bool) -> bool {
-    let surface = font.render(text).blended(Color::RGB(100, 100, 100)).unwrap();
-    // use let binding to avoid borrowing issues
-    let texture_creator = canvas.texture_creator();
-    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
-    let texture_query = texture.query();
-    canvas
-        .copy(
-            &texture,
-            None,
-            Rect::new(x, y, texture_query.width, texture_query.height),
-        )
-        .expect("Failed to copy texture");
-    false
 }
