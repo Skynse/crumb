@@ -1,12 +1,6 @@
-use rand::Rng;
-use sdl2::pixels::Color;
-
-
-use super::{World, Api, Wind};
+use super::{Api, Wind};
 use crate::engine::{Cell, EMPTY_CELL};
-#[derive( Clone, Copy, PartialEq, Debug, Eq)]
-
-
+#[derive(Clone, Copy, PartialEq, Debug, Eq)]
 #[derive(Default)]
 pub enum Species {
     EMPT = 0,
@@ -24,8 +18,8 @@ pub enum Species {
 impl Species {
     pub fn update(&self, cell: Cell, api: Api) {
         match self {
-            Species::EMPT => {},
-            Species::WALL => {},
+            Species::EMPT => {}
+            Species::WALL => {}
             Species::DUST => update_dust(cell, api),
             Species::SAND => update_sand(cell, api),
             Species::WATR => update_water(cell, api),
@@ -85,12 +79,32 @@ pub fn update_water(cell: Cell, mut api: Api) {
     if nt.species == Species::SAND {
         // make water flow up and bring sand down
         api.set(0, -1, cell);
-        api.set(0, 0, Cell{species: Species::SAND, ra: 0, rb: 0, clock: 0, ..Default::default()});
+        api.set(
+            0,
+            0,
+            Cell {
+                species: Species::SAND,
+                ra: 0,
+                rb: 0,
+                clock: 0,
+                ..Default::default()
+            },
+        );
     }
 
     // if the temperature of the water is high enough, it will evaporate into smoke
     if cell.temperature > 100.0 {
-        api.set(0, 0, Cell{species: Species::SMKE, ra: 0, rb: 0, clock: 0, ..Default::default()});
+        api.set(
+            0,
+            0,
+            Cell {
+                species: Species::SMKE,
+                ra: 0,
+                rb: 0,
+                clock: 0,
+                ..Default::default()
+            },
+        );
     }
 
     if nb.species == Species::EMPT {
@@ -102,9 +116,7 @@ pub fn update_water(cell: Cell, mut api: Api) {
     } else if nbl.species == Species::EMPT {
         api.set(dx - 1, 1, cell);
         api.set(0, 0, EMPTY_CELL);
-    }
-
-    else {
+    } else {
         if nr.species == Species::EMPT {
             api.set(1, 0, cell);
             api.set(0, 0, EMPTY_CELL);
@@ -113,20 +125,30 @@ pub fn update_water(cell: Cell, mut api: Api) {
             api.set(0, 0, EMPTY_CELL);
         }
     }
-
 }
 
 pub fn update_fire(cell: Cell, mut api: Api) {
     let ra = cell.ra;
     let mut degraded = cell.clone();
-    degraded.ra = ra - (2 + api.rand_dir()) as u8;
+    degraded.ra = ra.wrapping_sub((2 + api.rand_dir()) as u8);
 
     let (dx, dy) = api.rand_vec_8();
-    
+
     // set the temperature of surrounding cells to temperature + 1
     let nb = api.get(dx, dy);
     if nb.species == Species::EMPT {
-        api.set(dx, dy, Cell{species: Species::FIRE, ra: 0, rb: 0, clock: 0, temperature: cell.temperature + 1.0, ..Default::default()});
+        api.set(
+            dx,
+            dy,
+            Cell {
+                species: Species::FIRE,
+                ra: 0,
+                rb: 0,
+                clock: 0,
+                temperature: cell.temperature + 1.0,
+                ..Default::default()
+            },
+        );
     }
 
     // if the temperature of the fire is high enough, it will burn the surrounding cells
@@ -157,7 +179,17 @@ pub fn update_fire(cell: Cell, mut api: Api) {
         });
     }
     if ra < 5 || api.get(dx, dy).species == Species::WATR {
-        api.set(0, 0, Cell{species: Species::SMKE, ra: 0, rb: 0, clock: 0, ..Default::default()});
+        api.set(
+            0,
+            0,
+            Cell {
+                species: Species::SMKE,
+                ra: 0,
+                rb: 0,
+                clock: 0,
+                ..Default::default()
+            },
+        );
     } else if api.get(dx, dy).species == Species::EMPT {
         api.set(0, 0, EMPTY_CELL);
         api.set(dx, dy, degraded);
@@ -169,7 +201,7 @@ pub fn update_fire(cell: Cell, mut api: Api) {
 pub fn update_smoke(cell: Cell, mut api: Api) {
     let dx = api.rand_dir();
     let nu = api.get(dx, -1);
-    
+
     if nu.species == Species::EMPT {
         api.set(dx, -1, cell);
         api.set(0, 0, EMPTY_CELL);
@@ -179,5 +211,4 @@ pub fn update_smoke(cell: Cell, mut api: Api) {
     if cell.clock > 100 {
         api.set(0, 0, EMPTY_CELL);
     }
-
 }
