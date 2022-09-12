@@ -83,6 +83,7 @@ impl Engine {
     }
 }
 
+#[allow(dead_code)]
 pub struct World {
     width: usize,
     height: usize,
@@ -109,11 +110,11 @@ impl<'a> Api<'a> {
         (i % 3) - 1
     }
 
-    pub fn once_in(&mut self, n: i32) -> bool {
+    pub fn _once_in(&mut self, n: i32) -> bool {
         self.rand_int(n) == 0
     }
 
-    pub fn get_fluid(&mut self) -> Wind {
+    pub fn _get_fluid(&mut self) -> Wind {
         let idx = self.world.get_index(self.x, self.y);
         self.world.winds[idx]
     }
@@ -141,6 +142,8 @@ impl<'a> Api<'a> {
         let ny = self.y.wrapping_add(dy as usize);
         self.world.get(nx, ny)
     }
+
+    #[allow(unused_comparisons)]
     pub fn set(&mut self, dx: i32, dy: i32, v: Cell) {
         if dx > 2 || dx < -2 || dy > 2 || dy < -2 {
             panic!("oob set");
@@ -157,7 +160,7 @@ impl<'a> Api<'a> {
         self.world.cells[i].clock = self.world.generation.wrapping_add(1);
     }
 
-    pub fn rand_dir_2(&mut self) -> i32 {
+    pub fn _rand_dir_2(&mut self) -> i32 {
         let i = rand::thread_rng().gen_range(0..100);
         if (i % 2) == 0 {
             -1
@@ -168,7 +171,7 @@ impl<'a> Api<'a> {
 }
 
 impl World {
-    fn blow_wind(cell: Cell, wind: Wind, mut api: Api) {
+    fn _blow_wind(cell: Cell, wind: Wind, mut api: Api) {
         if cell.clock - api.world.generation == 1 {
             return;
         }
@@ -310,7 +313,7 @@ impl World {
             };
 
             for y in 0..self.height - 1 {
-                let idx = self.get_index(scanx, y);
+                let _idx = self.get_index(scanx, y);
                 let cell = self.get_cell(scanx, y);
 
                 World::update_cell(

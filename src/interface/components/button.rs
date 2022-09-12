@@ -1,7 +1,7 @@
 use sdl2::ttf;
-use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 
+#[allow(dead_code)]
 pub struct Button {
     x: i32,
     y: i32,
@@ -11,6 +11,7 @@ pub struct Button {
     callback: fn(),
 }
 
+#[allow(dead_code)]
 impl Button {
     pub fn new(x: i32, y: i32, width: i32, height: i32, text: String, callback: fn()) -> Button {
         Button {

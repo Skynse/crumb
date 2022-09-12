@@ -69,7 +69,7 @@ pub fn update_sand(cell: Cell, mut api: Api) {
 }
 
 pub fn update_water(cell: Cell, mut api: Api) {
-    let dispersal_rate: i32 = 10;
+    let _dispersal_rate: i32 = 10;
     let dx = api.rand_dir();
     let nb = api.get(dx, 1);
     let nbr = api.get(dx + 1, 1);
@@ -216,7 +216,7 @@ pub fn update_smoke(cell: Cell, mut api: Api) {
 }
 
 pub fn update_gol(cell: Cell, mut api: Api) {
-    let GOL_DEAD: Cell = Cell {
+    let gol_dead: Cell = Cell {
         species: Species::GOL,
         clock: 0,
         temperature: 0.0,
@@ -224,7 +224,7 @@ pub fn update_gol(cell: Cell, mut api: Api) {
         rb: 0,
     };
 
-    let GOL_ALIVE: Cell = Cell {
+    let gol_alive: Cell = Cell {
         species: Species::GOL,
         clock: 0,
         temperature: 0.0,
@@ -275,17 +275,17 @@ pub fn update_gol(cell: Cell, mut api: Api) {
     // 1 for alive, 0 for dead
     if cell.rb == 1 {
         if neighbors < 2 {
-            api.set(0, 0, GOL_DEAD);
+            api.set(0, 0, gol_dead);
         } else if neighbors > 3 {
-            api.set(0, 0, GOL_DEAD);
+            api.set(0, 0, gol_dead);
         } else {
-            api.set(0, 0, GOL_ALIVE);
+            api.set(0, 0, gol_alive);
         }
     } else {
         if neighbors == 3 {
-            api.set(0, 0, GOL_ALIVE);
+            api.set(0, 0, gol_alive);
         } else {
-            api.set(0, 0, GOL_DEAD);
+            api.set(0, 0, gol_dead);
         }
     }
     

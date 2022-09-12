@@ -1,19 +1,17 @@
 use crate::engine::{Engine, species, Cell};
-use crate::interface::components::*;
 
+use sdl2::pixels::PixelFormatEnum;
 use species::Species;
 pub mod defaults;
 mod components;
 use rand::Rng;
-use sdl2::{mouse, pixels::Color, rect::Rect, render::Canvas};
+use sdl2::{pixels::Color, rect::Rect, render::Canvas};
 
-use self::{defaults::{UI_X, UI_Y, WIDTH, HEIGHT}, button::Button};
+use self::{defaults::{UI_X, UI_Y, WIDTH, HEIGHT}};
 
 const BACKGROUND_COLOR: Color = Color::RGB(0, 0, 0);
-const MAX_CURSOR_SIZE: usize = 50;
-const  PI: f32 = 3.1415926535;
-
-pub fn varyColor(color: Color) -> Color {
+const MAX_CURSOR_SIZE: usize = 300;
+pub fn vary_color(color: Color) -> Color {
     // vary color by 10%
     let vary_amount = rand::thread_rng().gen_range(1..50);
     let mut r = color.r;
@@ -36,9 +34,7 @@ pub fn varyColor(color: Color) -> Color {
 fn is_in_window(x: i32, y: i32, wx: i32, wy: i32) -> bool {
     x >= 0 && x < wx as i32 && y >= 0 && y < wy as i32
 }
-pub struct Interface {
-    engine: Engine,
-}
+pub struct Interface;
 // create an array of possible cell species for our selector
 const CELL_SPECIES: [Species; 10] = [
     Species::EMPT,
@@ -57,15 +53,12 @@ impl Interface {
 
     
     pub fn run(mut engine_: Engine) {
+        let zoom = 100;
 
         let mut selected_index = 2;
         let mut cursor_size = 3;
 
         let mut paused: bool = false;
-        // create a function pointer for pausing
-        let mut pause = || {
-            paused = !paused;
-        };
 
         let ttf_context = sdl2::ttf::init().expect("Failed to initialize TTF");
             let font = ttf_context
@@ -91,16 +84,19 @@ impl Interface {
 
         // change canvas scale to 2.0
         canvas.set_scale(2.0, 2.0).expect("Failed to set scale");
-        let tc = canvas.texture_creator();
-        let mut texture = tc
-            .create_texture_streaming(sdl2::pixels::PixelFormatEnum::RGB24, 1, 1)
-            .expect("Failed to create texture");
-    
-        
 
         let mut event_pump = sdl.event_pump().expect("Failed to create event pump");
         // start game loop
+
+        // draw appropriate textures
+        let zoomed_texture_creator = canvas.texture_creator();
+        let mut zoomed_texture = zoomed_texture_creator
+            .create_texture_streaming(PixelFormatEnum::RGB24, zoom as u32, zoom as u32)
+            .unwrap();
+
         loop {
+            let start_time = std::time::Instant::now();
+            
             for event in event_pump.poll_iter() {
                 match event {
                     // when number keys are pressed, change the selected cell
@@ -141,8 +137,6 @@ impl Interface {
                         sdl2::keyboard::Keycode::Num0 => {
                             selected_index = 9;
                         }
-
-
 
                         // when spacebar is pressed, pause the simulation
                         sdl2::keyboard::Keycode::Space => {
@@ -200,17 +194,17 @@ impl Interface {
                     let color = match cell.get_species() {
                         Species::EMPT => BACKGROUND_COLOR,
                         Species::WALL => Color::RGB(255, 255, 255),
-                        Species::DUST => varyColor(Color::RGB(255, 200, 230)),
-                        Species::SAND => varyColor(Color::RGB(255, 200, 100)),
-                        Species::WATR => varyColor(Color::RGB(100, 100, 255)),
-                        Species::GAS => varyColor(Color::RGB(255, 255, 255)),
-                        Species::OIL => varyColor(Color::RGB(255, 100, 0)),
-                        Species::FIRE => varyColor(Color::RGB(255, 120, 0)),
-                        Species::SMKE => varyColor(Color::RGB(100, 100, 100)),
+                        Species::DUST => vary_color(Color::RGB(255, 200, 230)),
+                        Species::SAND => vary_color(Color::RGB(255, 200, 100)),
+                        Species::WATR => vary_color(Color::RGB(100, 100, 255)),
+                        Species::GAS => vary_color(Color::RGB(255, 255, 255)),
+                        Species::OIL => vary_color(Color::RGB(255, 100, 0)),
+                        Species::FIRE => vary_color(Color::RGB(255, 120, 0)),
+                        Species::SMKE => vary_color(Color::RGB(100, 100, 100)),
                         Species::GOL => match cell.rb {
                             // check if cell is alive or dead when ra  is 1
-                            1 => varyColor(Color::RGB(255, 255, 255)),
-                            _ => varyColor(Color::RGB(0, 0, 0)),
+                            1 => vary_color(Color::RGB(255, 255, 255)),
+                            _ => vary_color(Color::RGB(0, 0, 0)),
                         },
                     };
                     
@@ -226,7 +220,6 @@ impl Interface {
             let mouse_state = event_pump.mouse_state();
             let mouse_x = mouse_state.x() /2;
             let mouse_y = mouse_state.y()/2;
-            let full_mouse: (i32, i32) = (mouse_x, mouse_y);
 
             if mouse_state.left() {
 
@@ -261,18 +254,105 @@ impl Interface {
             let vwidth = viewport.width();
             let vheight = viewport.height();
             // use let binding to avoid borrowing issues
-            let text = format!("{:?}, Temp: {} C",cell.get_species(), cell.get_temperature());
             
-            draw_text(&mut canvas, &font, text.as_str(), (0) as i32,  (0) as i32);
             
 
             // draw selected cell at the end of the screen
             draw_text(&mut canvas, &font, format!("{:?}", CELL_SPECIES[selected_index]).as_str(), vwidth as i32 - UI_X as i32, 0);
             
 
+            // draw a zoomed in view of the nxn grid around the mouse at bottom left of the screen
+            // check if z pressed 
+            if keyboard_state.is_scancode_pressed(sdl2::keyboard::Scancode::Z) {
+
+            let zoomed_view = Rect::new(
+                mouse_x - zoom as i32 / 2,
+                mouse_y - zoom as i32 / 2,
+                zoom as u32,
+                zoom as u32,
+            );
+            let zoomed_view = zoomed_view
+                .intersection(Rect::new(0, 0, WIDTH as u32, HEIGHT as u32))
+                .unwrap();
+
+            let mut zoomed_pixels = Vec::new();
+            for y in zoomed_view.y()..zoomed_view.y() + zoomed_view.height() as i32 {
+                for x in zoomed_view.x()..zoomed_view.x() + zoomed_view.width()  as i32{
+                    let cell = engine_.world.get(x as usize, y as usize);
+                    let color = match cell.get_species() {
+                        Species::EMPT => BACKGROUND_COLOR,
+                        Species::WALL => Color::RGB(255, 255, 255),
+                        Species::DUST => vary_color(Color::RGB(255, 200, 230)),
+                        Species::SAND => vary_color(Color::RGB(255, 200, 100)),
+                        Species::WATR => vary_color(Color::RGB(100, 100, 255)),
+                        Species::GAS => vary_color(Color::RGB(255, 255, 255)),
+                        Species::OIL => vary_color(Color::RGB(255, 100, 0)),
+                        Species::FIRE => vary_color(Color::RGB(255, 120, 0)),
+                        Species::SMKE => vary_color(Color::RGB(100, 100, 100)),
+                        Species::GOL => match cell.rb {
+                            // check if cell is alive or dead when ra  is 1
+                            1 => vary_color(Color::RGB(255, 255, 255)),
+                            _ => vary_color(Color::RGB(0, 0, 0)),
+                        },
+                    };
+                    zoomed_pixels.push(color);
+                }
+            }
+            // convert zoomed_pixels to u8
+            let mut zoomed_pixels_u8 = Vec::new();
+            for pixel in zoomed_pixels {
+                zoomed_pixels_u8.push(pixel.r);
+                zoomed_pixels_u8.push(pixel.g);
+                zoomed_pixels_u8.push(pixel.b);
+            }
+
+            zoomed_texture
+                .update(None, &zoomed_pixels_u8, zoom as usize * 3)
+                .unwrap();
+                
+            // draw outline of around zoomed view
+            canvas.set_draw_color(Color::RGB(255, 255, 255));
+            canvas
+                .draw_rect(Rect::new(
+                    mouse_x - zoom as i32 / 2,
+                    mouse_y - zoom as i32 / 2,
+                    zoom as u32,
+                    zoom as u32,
+                ))
+                .expect("Failed to draw zoomed view");
+
+            // draw outline around the zoom rect in the bottom left
+            canvas.set_draw_color(Color::RGB(255, 255, 255));
+            canvas
+                .draw_rect(Rect::new(
+                    0+1,
+                    vheight as i32 - zoom as i32 -1,
+                    zoom as u32,
+                    zoom as u32,
+                ))
+                .expect("Failed to draw zoomed view");
+            canvas
+                .copy(
+                    &zoomed_texture,
+                    None,
+                    Rect::new(
+                        0,
+                        vheight as i32 - zoom as i32,
+                        zoom as u32,
+                        zoom as u32,
+                    ),
+                )
+                .unwrap();
+            }
+                
             if !paused {
                 engine_.world.tick();
             }
+
+            let end_time = std::time::Instant::now();
+            let text = format!("{:?}, Temp: {} C, FPS: {:.2}",cell.get_species(), cell.get_temperature(), 1.0 / end_time.duration_since(start_time).as_secs_f32());
+            
+            draw_text(&mut canvas, &font, text.as_str(), (0) as i32,  (0) as i32);
             canvas.present();
         }
     }
