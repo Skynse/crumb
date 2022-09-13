@@ -1,3 +1,4 @@
+use crate::engine::species::SPECIES_COUNT;
 use crate::engine::{Engine, species, Cell};
 
 use sdl2::{pixels::PixelFormatEnum};
@@ -40,23 +41,14 @@ fn is_in_window(x: i32, y: i32, wx: i32, wy: i32) -> bool {
 }
 pub struct Interface;
 // create an array of possible cell species for our selector
-const CELL_SPECIES: [Species; 10] = [
-    Species::EMPT,
-    Species::WALL,
-    Species::DUST,
-    Species::SAND,
-    Species::WATR,
-    Species::FIRE,
-    Species::GAS,
-    Species::OIL,
-    Species::SMKE,
-    Species::GOL,
-];
 
 impl Interface {
 
     
     pub fn run(mut engine_: Engine) {
+        let cell_species: &[Species] = &Species::all();
+
+
         let zoom = 100;
 
         let mut selected_index: usize = 2;
@@ -64,10 +56,11 @@ impl Interface {
 
         let mut paused: bool = false;
         let mut ctrl_pressed: bool = false;
+        let mut mouse_left_clicked: bool = false;
         
         // read font data and use in ttf_context
         let ttf_context = sdl2::ttf::init().unwrap();
-        let mut font = ttf_context.load_font_from_rwops(sdl2::rwops::RWops::from_bytes(FONT).unwrap(), 12).unwrap();
+        let mut font = ttf_context.load_font_from_rwops(sdl2::rwops::RWops::from_bytes(FONT).unwrap(), 8).unwrap();
         font.set_style(sdl2::ttf::FontStyle::BOLD);
 
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
@@ -104,7 +97,12 @@ impl Interface {
             
             for event in event_pump.poll_iter() {
                 match event {
-                    // when number keys are pressed, change the selected cell
+
+                    sdl2::event::Event::MouseButtonDown { mouse_btn, .. } => {
+                        if mouse_btn == sdl2::mouse::MouseButton::Left {
+                            mouse_left_clicked = true;
+                        }
+                    }
                     sdl2::event::Event::KeyDown {
                         keycode: Some(keycode),
                         ..
@@ -149,13 +147,15 @@ impl Interface {
                     } else {
                         // set selected index to the index of the cell species based on scroll direction, wrapping around if necessary
                         if y > 0 {
-                            selected_index = (selected_index + 1) % CELL_SPECIES.len();
+                            selected_index = (selected_index + 1) % cell_species.len();
                         } else {
-                            selected_index = (selected_index + CELL_SPECIES.len() - 1) % CELL_SPECIES.len();
+                            selected_index = (selected_index + cell_species.len() - 1) % cell_species.len();
                         }
                     }
                     }
-                    _ => {}
+                    _ => {
+                        mouse_left_clicked = false;
+                    }
                 }
             }
 
@@ -188,6 +188,7 @@ impl Interface {
                             1 => vary_color(Color::RGB(255, 255, 255)),
                             _ => vary_color(Color::RGB(0, 0, 0)),
                         },
+                        Species::WOOD => vary_color(Color::RGB(100, 50, 0)),
                     };
                     
 
@@ -202,6 +203,8 @@ impl Interface {
             let mouse_state = event_pump.mouse_state();
             let mouse_x = mouse_state.x() /2;
             let mouse_y = mouse_state.y()/2;
+            
+            
 
             if mouse_state.left() {
 
@@ -212,7 +215,7 @@ impl Interface {
                             engine_.world.set(
                                 ((mouse_x  as i32) as usize + x).saturating_sub(cursor_size / 2),
                                 ((mouse_y as i32) as usize + y).saturating_sub(cursor_size / 2),
-                                Cell::new(CELL_SPECIES[selected_index]),
+                                Cell::new(cell_species[selected_index]),
                             );
                         }
                     }
@@ -240,7 +243,7 @@ impl Interface {
             
 
             // draw selected cell at the end of the screen
-            draw_text(&mut canvas, &font, format!("{:?}", CELL_SPECIES[selected_index]).as_str(), vwidth as i32 - UI_X as i32, 0);
+            draw_text(&mut canvas, &font, format!("{:?}", cell_species[selected_index]).as_str(), vwidth as i32 - UI_X as i32, 0);
             
 
             // draw a zoomed in view of the nxn grid around the mouse at bottom left of the screen
@@ -278,6 +281,8 @@ impl Interface {
                             1 => vary_color(Color::RGB(255, 255, 255)),
                             _ => vary_color(Color::RGB(0, 0, 0)),
                         },
+                        Species::WOOD => vary_color(Color::RGB(100, 50, 0)),
+                        
                     };
                     zoomed_pixels.push(color);
                 }
@@ -337,6 +342,9 @@ impl Interface {
             let text = format!("{:?}, Temp: {} C, FPS: {:.2}",cell.get_species(), cell.get_temperature(), 1.0 / end_time.duration_since(start_time).as_secs_f32());
             
             draw_text(&mut canvas, &font, text.as_str(), (0) as i32,  (0) as i32);
+
+            selected_index = draw_scrollbar(&mut canvas, &font, 0, vheight as i32 -UI_Y as i32, vwidth-UI_X as u32, UI_Y as u32, selected_index, cell_species, (mouse_x, mouse_y), mouse_left_clicked);
+
             canvas.present();
         }
     }
@@ -356,4 +364,53 @@ fn draw_text(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Font, t
             Rect::new(x, y, texture_query.width, texture_query.height),
         )
         .expect("Failed to copy texture");
+}
+
+//implement horizontal scrollbar which displays clickable list of species
+fn draw_scrollbar(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Font, x: i32, y: i32, width: u32, height: u32,mut selected_index: usize, species: &[Species], mouse_coords : (i32, i32), clicked: bool) -> usize {
+    // draw scrollbar
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
+    canvas
+        .fill_rect(Rect::new(x, y, width, height))
+        .expect("Failed to draw scrollbar");
+    // draw scrollbar slider
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
+    canvas
+        .fill_rect(Rect::new(
+            x + 1 + (selected_index as i32) * width as i32 / species.len() as i32,
+            y + 1,
+            width / species.len() as u32 - 2,
+            height -1,
+        ))
+        .expect("Failed to draw scrollbar slider");
+    // draw scrollbar text
+    for (i, species) in species.iter().enumerate() {
+        draw_text(
+            canvas,
+            font,
+            format!("{:?}", species).as_str(),
+            x as i32 + (i as u32 * width / SPECIES_COUNT as u32 ) as i32 + 5,
+            y as i32 + 5,
+        );
+    }
+
+    // if mouse on hover, draw some outline 
+    if mouse_coords.0 > x && mouse_coords.0 < x + width as i32 && mouse_coords.1 > y && mouse_coords.1 < y + height as i32 {
+        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        canvas
+            .draw_rect(Rect::new(x, y, width, height))
+            .expect("Failed to draw scrollbar outline");
+    }
+
+    // check if mouse is hovering over scrollbar
+    if mouse_coords.0 > x && mouse_coords.0 < x + width as i32 && mouse_coords.1 > y && mouse_coords.1 < y + height as i32 {
+        // check if mouse is clicked
+        if clicked {
+            // get index at where we clicked
+            selected_index = (mouse_coords.0 - x) as usize * SPECIES_COUNT / width as usize;
+            // set selected_index to the index of the species that the mouse is hovering over
+        }
+        
+    }
+    return selected_index
 }

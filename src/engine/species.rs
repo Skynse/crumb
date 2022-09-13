@@ -1,5 +1,6 @@
 use super::{Api, Wind};
 use crate::engine::{Cell, EMPTY_CELL};
+
 #[derive(Clone, Copy, PartialEq, Debug, Eq)]
 #[derive(Default)]
 pub enum Species {
@@ -14,8 +15,28 @@ pub enum Species {
     FIRE = 7,
     SMKE = 8,
     GOL = 9,
+    WOOD = 10,
 }
 
+pub const SPECIES_COUNT: usize = 11;
+// create an impl for species which returns an array of species in the order they are defined
+impl Species {
+    pub fn all() -> [Species; SPECIES_COUNT] {
+        [
+            Species::EMPT,
+            Species::WALL,
+            Species::DUST,
+            Species::SAND,
+            Species::WATR,
+            Species::GAS,
+            Species::OIL,
+            Species::FIRE,
+            Species::SMKE,
+            Species::GOL,
+            Species::WOOD,
+        ]
+    }
+}
 impl Species {
     pub fn update(&self, cell: Cell, api: Api) {
         match self {
@@ -29,6 +50,7 @@ impl Species {
             Species::FIRE => update_fire(cell, api),
             Species::SMKE => update_smoke(cell, api),
             Species::GOL => update_gol(cell, api),
+            Species::WOOD => update_wood(cell, api),
         }
     }
 }
@@ -290,4 +312,9 @@ pub fn update_gol(cell: Cell, mut api: Api) {
     }
     
 
+}
+
+pub fn update_wood(cell: Cell, mut api: Api) {
+    // draw block of wood
+    api.set(0, 0, cell);
 }
