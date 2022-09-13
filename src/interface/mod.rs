@@ -1,16 +1,20 @@
 use crate::engine::{Engine, species, Cell};
 
-use sdl2::{pixels::PixelFormatEnum, surface::Surface};
+use sdl2::{pixels::PixelFormatEnum};
+use sdl2::{pixels::Color, rect::Rect, render::Canvas};
+
 use species::Species;
 pub mod defaults;
 mod components;
 use rand::Rng;
-use sdl2::{pixels::Color, rect::Rect, render::Canvas};
 
 use self::{defaults::{UI_X, UI_Y, WIDTH, HEIGHT}};
 
 const BACKGROUND_COLOR: Color = Color::RGB(0, 0, 0);
 const MAX_CURSOR_SIZE: usize = 300;
+
+const FONT: &[u8] = include_bytes!("res/Monocraft.ttf");
+
 pub fn vary_color(color: Color) -> Color {
     // vary color by 10%
     let vary_amount = rand::thread_rng().gen_range(1..50);
@@ -60,14 +64,11 @@ impl Interface {
 
         let mut paused: bool = false;
         let mut ctrl_pressed: bool = false;
-
-        // let surface =
-        let surface = sdl2::surface::Surface::new(WIDTH as u32, HEIGHT as u32, PixelFormatEnum::RGB24).unwrap();
-        let ttf_context = sdl2::ttf::init().expect("Failed to initialize TTF");
-            let mut font = ttf_context
-                .load_font("./assets/Monocraft.ttf", 12)
-                .expect("Failed to load font");
-                font.set_style(sdl2::ttf::FontStyle::BOLD);
+        
+        // read font data and use in ttf_context
+        let ttf_context = sdl2::ttf::init().unwrap();
+        let mut font = ttf_context.load_font_from_rwops(sdl2::rwops::RWops::from_bytes(FONT).unwrap(), 12).unwrap();
+        font.set_style(sdl2::ttf::FontStyle::BOLD);
 
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
         
@@ -108,39 +109,6 @@ impl Interface {
                         keycode: Some(keycode),
                         ..
                     } => match keycode {
-                        sdl2::keyboard::Keycode::Num1 => {
-                            selected_index = 0;
-                        }
-                        sdl2::keyboard::Keycode::Num2 => {
-                            selected_index = 1;
-                        }
-                        sdl2::keyboard::Keycode::Num3 => {
-                            selected_index = 2;
-                        }
-                        sdl2::keyboard::Keycode::Num4 => {
-                            selected_index = 3;
-                        }
-                        sdl2::keyboard::Keycode::Num5 => {
-                            selected_index = 4;
-                        }
-                        sdl2::keyboard::Keycode::Num6 => {
-                            selected_index = 5;
-                        }
-                        sdl2::keyboard::Keycode::Num7 => {
-                            selected_index = 6;
-                        }
-
-                        sdl2::keyboard::Keycode::Num8 => {
-                            selected_index = 7;
-                        }
-
-                        sdl2::keyboard::Keycode::Num9 => {
-                            selected_index = 8;
-                        }
-
-                        sdl2::keyboard::Keycode::Num0 => {
-                            selected_index = 9;
-                        }
 
                         // when spacebar is pressed, pause the simulation
                         sdl2::keyboard::Keycode::Space => {
