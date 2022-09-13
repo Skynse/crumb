@@ -1,5 +1,9 @@
 [package]
 name = "crumb"
+description = "Falling sand game written in Rust"
+readme = "README.md"
+homepage = "https://github.com/skynse/crumb"
+repository = "https://github.com/skynse/crumb"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,3 +24,9 @@ features = ["ttf"]
 
 [profile.release]
 debug = 1
+
+# add assets/FiraBold.ttf to installation
+[[bin]]
+name = "crumb"
+path = "src/main.rs"
+install = true

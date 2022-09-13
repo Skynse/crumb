@@ -1,6 +1,6 @@
 use crate::engine::{Engine, species, Cell};
 
-use sdl2::pixels::PixelFormatEnum;
+use sdl2::{pixels::PixelFormatEnum, surface::Surface};
 use species::Species;
 pub mod defaults;
 mod components;
@@ -55,15 +55,19 @@ impl Interface {
     pub fn run(mut engine_: Engine) {
         let zoom = 100;
 
-        let mut selected_index = 2;
+        let mut selected_index: usize = 2;
         let mut cursor_size = 3;
 
         let mut paused: bool = false;
+        let mut ctrl_pressed: bool = false;
 
+        // let surface =
+        let surface = sdl2::surface::Surface::new(WIDTH as u32, HEIGHT as u32, PixelFormatEnum::RGB24).unwrap();
         let ttf_context = sdl2::ttf::init().expect("Failed to initialize TTF");
-            let font = ttf_context
-                .load_font("./assets/FiraSans-Bold.ttf", 12)
+            let mut font = ttf_context
+                .load_font("./assets/Monocraft.ttf", 12)
                 .expect("Failed to load font");
+                font.set_style(sdl2::ttf::FontStyle::BOLD);
 
         let sdl = sdl2::init().expect("Failed to initialize SDL2");
         
@@ -81,7 +85,7 @@ impl Interface {
                 .build()
                 .expect("Failed to create canvas")
         };
-
+        
         // change canvas scale to 2.0
         canvas.set_scale(2.0, 2.0).expect("Failed to set scale");
 
@@ -155,9 +159,6 @@ impl Interface {
                             }
                         }
                         
-                        sdl2::keyboard::Keycode::LCtrl => {
-                            println!("{:?}", event);
-                        }
                         sdl2::keyboard::Keycode::C => {
                             engine_.world.clear();
                         }
@@ -171,18 +172,31 @@ impl Interface {
                     sdl2::event::Event::Quit { .. } => return,
                     
                     sdl2::event::Event::MouseWheel { y, .. } => {
+                        if ctrl_pressed {
                         if y > 0 {
                             cursor_size = (cursor_size + 1).min(MAX_CURSOR_SIZE);
                         } else {
                             cursor_size = (cursor_size - 1).max(1);
                         }
+                    } else {
+                        // set selected index to the index of the cell species based on scroll direction, wrapping around if necessary
+                        if y > 0 {
+                            selected_index = (selected_index + 1) % CELL_SPECIES.len();
+                        } else {
+                            selected_index = (selected_index + CELL_SPECIES.len() - 1) % CELL_SPECIES.len();
+                        }
+                    }
                     }
                     _ => {}
                 }
             }
 
             let keyboard_state = event_pump.keyboard_state();
- 
+            if keyboard_state.is_scancode_pressed(sdl2::keyboard::Scancode::LCtrl) {
+               ctrl_pressed = true;
+            } else {
+                ctrl_pressed = false;
+            }
 
             canvas.set_draw_color(BACKGROUND_COLOR);
             canvas.clear();
@@ -275,6 +289,8 @@ impl Interface {
                 .intersection(Rect::new(0, 0, WIDTH as u32, HEIGHT as u32))
                 .unwrap();
 
+
+            // actual zoom logic goes here
             let mut zoomed_pixels = Vec::new();
             for y in zoomed_view.y()..zoomed_view.y() + zoomed_view.height() as i32 {
                 for x in zoomed_view.x()..zoomed_view.x() + zoomed_view.width()  as i32{
@@ -360,7 +376,7 @@ impl Interface {
 
 
 fn draw_text(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Font, text: &str, x: i32, y: i32) {
-    let surface = font.render(text).blended(Color::RGB(100, 100, 100)).unwrap();
+    let surface = font.render(text).blended(Color::RGB(150, 150, 150)).unwrap();
     // use let binding to avoid borrowing issues
     let texture_creator = canvas.texture_creator();
     let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
