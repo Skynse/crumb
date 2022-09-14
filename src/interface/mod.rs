@@ -7,9 +7,11 @@ use sdl2::{pixels::Color, rect::Rect, render::Canvas};
 
 use species::Species;
 pub mod defaults;
+pub mod utils;
 mod components;
 use rand::Rng;
 
+use self::utils::cell_to_color;
 use self::{defaults::{UI_X, UI_Y, WIDTH, HEIGHT}};
 
 const BACKGROUND_COLOR: Color = Color::RGB(0, 0, 0);
@@ -216,24 +218,7 @@ impl Interface {
                 for y in zoomed_view.y()..zoomed_view.y() + zoomed_view.height() as i32 {
                     for x in zoomed_view.x()..zoomed_view.x() + zoomed_view.width()  as i32{
                         let cell = engine_.world.get(x as usize, y as usize);
-                        let color = match cell.get_species() {
-                            Species::EMPT => BACKGROUND_COLOR,
-                            Species::WALL => Color::RGB(255, 255, 255),
-                            Species::DUST => vary_color(Color::RGB(255, 200, 230)),
-                            Species::SAND => vary_color(Color::RGB(255, 200, 100)),
-                            Species::WATR => vary_color(Color::RGB(100, 100, 255)),
-                            Species::GAS => vary_color(Color::RGB(255, 255, 255)),
-                            Species::OIL => vary_color(Color::RGB(255, 100, 0)),
-                            Species::FIRE => vary_color(Color::RGB(255, 120, 0)),
-                            Species::SMKE => vary_color(Color::RGB(100, 100, 100)),
-                            Species::GOL => match cell.rb {
-                                // check if cell is alive or dead when ra  is 1
-                                1 => vary_color(Color::RGB(255, 255, 255)),
-                                _ => vary_color(Color::RGB(0, 0, 0)),
-                            },
-                            Species::WOOD => vary_color(Color::RGB(100, 50, 0)),
-                            
-                        };
+                        let color = cell_to_color(cell);
                         zoomed_pixels.push(color);
                     }
                 }
@@ -318,24 +303,7 @@ fn draw_zoom(canvas: &mut Canvas<sdl2::video::Window>, zoomed_texture: &mut Text
     for y in zoomed_view.y()..zoomed_view.y() + zoomed_view.height() as i32 {
         for x in zoomed_view.x()..zoomed_view.x() + zoomed_view.width()  as i32{
             let cell = world.get(x as usize, y as usize);
-            let color = match cell.get_species() {
-                Species::EMPT => BACKGROUND_COLOR,
-                Species::WALL => Color::RGB(255, 255, 255),
-                Species::DUST => vary_color(Color::RGB(255, 200, 230)),
-                Species::SAND => vary_color(Color::RGB(255, 200, 100)),
-                Species::WATR => vary_color(Color::RGB(100, 100, 255)),
-                Species::GAS => vary_color(Color::RGB(255, 255, 255)),
-                Species::OIL => vary_color(Color::RGB(255, 100, 0)),
-                Species::FIRE => vary_color(Color::RGB(255, 120, 0)),
-                Species::SMKE => vary_color(Color::RGB(100, 100, 100)),
-                Species::GOL => match cell.rb {
-                    // check if cell is alive or dead when ra  is 1
-                    1 => vary_color(Color::RGB(255, 255, 255)),
-                    _ => vary_color(Color::RGB(0, 0, 0)),
-                },
-                Species::WOOD => vary_color(Color::RGB(100, 50, 0)),
-                
-            };
+            let color = cell_to_color(cell);
             
             zoomed_pixels.push(color);
         }
@@ -392,23 +360,7 @@ fn draw_world(canvas: &mut Canvas<sdl2::video::Window>, width_: u32, height_:u32
     for y in (0..height_ - UI_Y as u32).rev() {
         for x in 0..width_-UI_X as u32 {
             let cell = world.get(x as usize, y as usize);
-            let color = match cell.get_species() {
-                Species::EMPT => BACKGROUND_COLOR,
-                Species::WALL => Color::RGB(255, 255, 255),
-                Species::DUST => vary_color(Color::RGB(255, 200, 230)),
-                Species::SAND => vary_color(Color::RGB(255, 200, 100)),
-                Species::WATR => vary_color(Color::RGB(100, 100, 255)),
-                Species::GAS => vary_color(Color::RGB(255, 255, 255)),
-                Species::OIL => vary_color(Color::RGB(255, 100, 0)),
-                Species::FIRE => vary_color(Color::RGB(255, 120, 0)),
-                Species::SMKE => vary_color(Color::RGB(100, 100, 100)),
-                Species::GOL => match cell.rb {
-                    // check if cell is alive or dead when ra  is 1
-                    1 => vary_color(Color::RGB(255, 255, 255)),
-                    _ => vary_color(Color::RGB(0, 0, 0)),
-                },
-                Species::WOOD => vary_color(Color::RGB(100, 50, 0)),
-            };
+            let color = cell_to_color(cell);
             
 
             canvas.set_draw_color(color);
@@ -463,14 +415,22 @@ fn draw_scrollbar(canvas: &mut Canvas<sdl2::video::Window>, font: &sdl2::ttf::Fo
         );
     }
 
-    // if mouse on hover, draw some outline 
+    // if the mouse is hovering over a species, draw some outline around it
     if mouse_coords.0 > x && mouse_coords.0 < x + width as i32 && mouse_coords.1 > y && mouse_coords.1 < y + height as i32 {
-        canvas.set_draw_color(Color::RGB(255, 255, 255));
+        let index = ((mouse_coords.0 - x) as u32 * SPECIES_COUNT as u32 / width) as usize;
+        canvas.set_draw_color(Color::RGB(255, 0, 0));
         canvas
-            .draw_rect(Rect::new(x, y, width, height))
-            .expect("Failed to draw scrollbar outline");
+            .draw_rect(Rect::new(
+                x + 1 + (index as i32) * width as i32 / species.len() as i32,
+                y + 1,
+                width / species.len() as u32 - 2,
+                height -1,
+            ))
+            .expect("Failed to draw scrollbar slider");
+        if clicked {
+            selected_index = index;
+        }
     }
-
     // check if mouse is hovering over scrollbar
     if mouse_coords.0 > x && mouse_coords.0 < x + width as i32 && mouse_coords.1 > y && mouse_coords.1 < y + height as i32 {
         // check if mouse is clicked

@@ -16,9 +16,11 @@ pub enum Species {
     SMKE = 8,
     GOL = 9,
     WOOD = 10,
+    OXGN = 11,
+    HYGN,
 }
 
-pub const SPECIES_COUNT: usize = 11;
+pub const SPECIES_COUNT: usize = 13;
 // create an impl for species which returns an array of species in the order they are defined
 impl Species {
     pub fn all() -> [Species; SPECIES_COUNT] {
@@ -34,6 +36,8 @@ impl Species {
             Species::SMKE,
             Species::GOL,
             Species::WOOD,
+            Species::OXGN,
+            Species::HYGN,
         ]
     }
 }
@@ -51,6 +55,8 @@ impl Species {
             Species::SMKE => update_smoke(cell, api),
             Species::GOL => update_gol(cell, api),
             Species::WOOD => update_wood(cell, api),
+            Species::OXGN => update_oxygen(cell, api),
+            Species::HYGN => update_hydrogen(cell, api),
         }
     }
 }
@@ -317,4 +323,131 @@ pub fn update_gol(cell: Cell, mut api: Api) {
 pub fn update_wood(cell: Cell, mut api: Api) {
     // draw block of wood
     api.set(0, 0, cell);
+}
+
+pub fn update_oxygen(cell: Cell, mut api: Api) {
+    // make oxygen, which moves around but not up
+    let dx = api.rand_dir();
+    let dy = api.rand_dir();
+    let nu = api.get(dx, dy);
+
+    if nu.species == Species::EMPT {
+        api.set(dx, dy, cell);
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+
+}
+
+pub fn update_hydrogen(cell: Cell, mut api: Api) {
+    // make hydrogen, which moves around but not up
+    let dx = api.rand_dir();
+    let dy = api.rand_dir();
+    let nu = api.get(dx, dy);
+
+    if nu.species == Species::EMPT {
+        api.set(dx, dy, cell);
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    //if any surrounding cells are OXGN, they will combine to make water and remove the hydrogen
+    let nb = api.get(dx, dy);
+    let nt = api.get(dx, dy);
+    let nr = api.get(dx, dy);
+    let nl = api.get(dx, dy);
+    let ntr = api.get(dx, dy);
+    let nbr = api.get(dx, dy);
+    let nbl = api.get(dx, dy);
+
+    let ntl = api.get(dx, dy);
+
+    if nb.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if nt.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if nr.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if nl.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if ntr.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if nbr.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if nbl.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    if ntl.species == Species::OXGN {
+        api.set(dx, dy, Cell {
+            species: Species::WATR,
+            ra: 0,
+            rb: 0,
+            clock: 0,
+            ..Default::default()
+        });
+        api.set(0, 0, EMPTY_CELL);
+    }
+
+    
 }
