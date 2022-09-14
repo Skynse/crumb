@@ -11,22 +11,16 @@ use rand_xoshiro::SplitMix64;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Cell {
-    species: Species,
+    pub species: Species,
     pub ra: u8,
     pub rb: u8,
-    clock: u8,
-    temperature: f32,
+    pub(crate) clock: u8,
 }
 
 // RA: []
 
 impl Cell {
     pub fn new(species: Species) -> Cell {
-        let temperature = if species == Species::FIRE {
-            422.0
-        } else {
-            22.0
-        };
 
         let rb = if species == Species::GOL {
             1
@@ -35,20 +29,15 @@ impl Cell {
         };
         Cell {
             species: species,
-            ra: 100 + rand::random::<u8>() % 100,
+            ra: 100 + rand::thread_rng().gen_range(0..2) * 50 as u8,
             rb: rb,
             clock: 0,
-            temperature: temperature,
         }
         
     }
 
     pub fn get_species(&self) -> Species {
         self.species
-    }
-
-    pub fn get_temperature(&self) -> f32 {
-        self.temperature
     }
 
     pub fn update(&self, api: Api) {
@@ -61,7 +50,6 @@ static EMPTY_CELL: Cell = Cell {
     ra: 0,
     rb: 0,
     clock: 0,
-    temperature: 22.0,
 };
 pub struct Engine {
     pub world: World,
@@ -78,25 +66,25 @@ pub struct Wind {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            world: World::new(defaults::WIDTH - UI_X, defaults::HEIGHT - UI_Y),
+            world: World::new(defaults::WIDTH as i32 - UI_X as i32, defaults::HEIGHT as i32 - UI_Y as i32),
         }
     }
 }
 
 #[allow(dead_code)]
 pub struct World {
-    width: usize,
-    height: usize,
+    width: i32,
+    height: i32,
     pub cells: Vec<Cell>,
     winds: Vec<Wind>,
-    generation: u8,
+    pub generation: u8,
     burns: Vec<Wind>,
-    rng: SplitMix64,
+    pub rng: SplitMix64,
 }
 
 pub struct Api<'a> {
-    x: usize,
-    y: usize,
+    x: i32,
+    y: i32,
     world: &'a mut World,
 }
 
@@ -110,17 +98,32 @@ impl<'a> Api<'a> {
         (i % 3) - 1
     }
 
-    pub fn _once_in(&mut self, n: i32) -> bool {
+    pub fn once_in(&mut self, n: i32) -> bool {
         self.rand_int(n) == 0
     }
 
-    pub fn _get_fluid(&mut self) -> Wind {
+    pub fn get_fluid(&mut self) -> Wind {
         let idx = self.world.get_index(self.x, self.y);
         self.world.winds[idx]
     }
     pub fn set_fluid(&mut self, v: Wind) {
         let idx = self.world.get_index(self.x, self.y);
         self.world.burns[idx] = v;
+    }
+
+    pub fn rand_vec(&mut self) -> (i32, i32) {
+        let i = self.rand_int(2000);
+        match i % 9 {
+            0 => (1, 1),
+            1 => (1, 0),
+            2 => (1, -1),
+            3 => (0, -1),
+            4 => (-1, -1),
+            5 => (-1, 0),
+            6 => (-1, 1),
+            7 => (0, 1),
+            _ => (0, 0),
+        }
     }
 
     pub fn rand_vec_8(&mut self) -> (i32, i32) {
@@ -138,9 +141,20 @@ impl<'a> Api<'a> {
     }
 
     pub fn get(&mut self, dx: i32, dy: i32) -> Cell {
-        let nx = self.x.wrapping_add(dx as usize);
-        let ny = self.y.wrapping_add(dy as usize);
-        self.world.get(nx, ny)
+        if dx > 2 || dx < -2 || dy > 2 || dy < -2 {
+            panic!("oob set");
+        }
+        let nx = self.x + dx;
+        let ny = self.y + dy;
+        if nx < 0 || nx > self.world.width - 1 || ny < 0 || ny > self.world.height - 1 {
+            return Cell {
+                species: Species::WALL,
+                ra: 0,
+                rb: 0,
+                clock: self.world.generation,
+            };
+        }
+        self.world.get_cell(nx, ny)
     }
 
     #[allow(unused_comparisons)]
@@ -148,8 +162,8 @@ impl<'a> Api<'a> {
         if dx > 2 || dx < -2 || dy > 2 || dy < -2 {
             panic!("oob set");
         }
-        let nx = self.x.wrapping_add(dx as usize);
-        let ny = self.y.wrapping_add(dy as usize);
+        let nx = self.x + dx;
+        let ny = self.y + dy;
 
         if nx < 0 || nx > self.world.width - 1 || ny < 0 || ny > self.world.height - 1 {
             return;
@@ -160,7 +174,7 @@ impl<'a> Api<'a> {
         self.world.cells[i].clock = self.world.generation.wrapping_add(1);
     }
 
-    pub fn _rand_dir_2(&mut self) -> i32 {
+    pub fn rand_dir_2(&mut self) -> i32 {
         let i = rand::thread_rng().gen_range(0..100);
         if (i % 2) == 0 {
             -1
@@ -171,8 +185,8 @@ impl<'a> Api<'a> {
 }
 
 impl World {
-    fn _blow_wind(cell: Cell, wind: Wind, mut api: Api) {
-        if cell.clock - api.world.generation == 1 {
+    fn blow_wind(cell: Cell, wind: Wind, mut api: Api) {
+        if cell.clock.wrapping_sub(api.world.generation) == 1 {
             return;
         }
         if cell.species == Species::EMPT {
@@ -184,8 +198,11 @@ impl World {
         let threshold = match cell.species {
             Species::EMPT => 500,
             Species::WALL => 500,
+            Species::GOL => 500,
+
 
             Species::OIL => 50,
+            Species::WATR => 50,
 
             Species::SAND => 30,
             Species::DUST => 10,
@@ -214,7 +231,12 @@ impl World {
             api.set(0, 0, EMPTY_CELL);
             if dy == -1
                 && api.get(dx, -2).species == Species::EMPT
-                && (cell.species == Species::SAND || cell.species == Species::WATR)
+                && (cell.species == Species::SAND 
+                    || cell.species == Species::WATR
+                    || cell.species == Species::DUST
+                    || cell.species == Species::OIL
+                    || cell.species == Species::GOL
+                )
             {
                 dy = -2;
             }
@@ -223,25 +245,27 @@ impl World {
         }
     }
     fn update_cell(cell: Cell, api: Api) {
-        if cell.clock == api.world.generation {
+        if cell.clock.saturating_sub(api.world.generation)  == 1 {
             return;
         }
         cell.update(api);
     }
 }
 
+
+// private methods
 impl World {
-    pub fn new(width: usize, height: usize) -> World {
+    pub fn new(width: i32, height: i32) -> World {
         let rng: SplitMix64 = SeedableRng::seed_from_u64(0x734f6b89de5f83cc);
         World {
-            width: (width / 2) + UI_X,
-            height: (height / 2) - UI_Y,
+            width: (width - UI_X as i32) /2 as i32,
+            height: (height -  UI_Y as i32) as i32,
             cells: vec![Cell::new(Species::EMPT); defaults::WIDTH * defaults::HEIGHT],
             winds: vec![
                 Wind {
                     dx: 0,
                     dy: 0,
-                    pressure: 0,
+                    pressure: 100,
                     density: 0
                 };
                 defaults::WIDTH * defaults::HEIGHT
@@ -259,11 +283,11 @@ impl World {
             rng,
         }
     }
-    fn get_index(&self, x: usize, y: usize) -> usize {
-        x + y * self.width as usize
+    pub fn get_index(&self, x: i32, y: i32) -> usize {
+        (x + y * self.width) as usize
     }
 
-    fn get_cell(&self, x: usize, y: usize) -> Cell {
+    fn get_cell(&self, x: i32, y: i32) -> Cell {
         let i = self.get_index(x, y);
         return self.cells[i];
     }
@@ -284,13 +308,19 @@ impl World {
             self.cells[i] = EMPTY_CELL;
         }
     }
+
+    fn get_wind(&self, x: i32, y: i32) -> Wind {
+        let i = self.get_index(x, y);
+        return self.winds[i];
+    }
+
     pub fn tick(&mut self) {
         // called every SDL frame
-        /*
-        for x in 0..self.width {
-            for y in 0..self.height {
+        
+        for y in 0..self.height {
+            for x in 0..self.width{
                 let cell = self.get_cell(x, y);
-                let wind = self.get_wind(x, y);
+                let wind = self.get_wind(x as i32, y as i32);
                 World::blow_wind(
                     cell,
                     wind,
@@ -302,8 +332,8 @@ impl World {
                 )
             }
         }
-        */
-        self.generation = self.generation.wrapping_add(1);
+        
+        self.generation = (self.generation + 1)%255;
 
         for x in 0..self.width - 1 {
             let scanx = if self.generation % 2 == 0 {
@@ -315,6 +345,13 @@ impl World {
             for y in 0..self.height - 1 {
                 let _idx = self.get_index(scanx, y);
                 let cell = self.get_cell(scanx, y);
+
+                self.burns[_idx] = Wind {
+                    dx: 0,
+                    dy: 0,
+                    pressure: 0,
+                    density: 0,
+                };
 
                 World::update_cell(
                     cell,
@@ -328,6 +365,6 @@ impl World {
             //std::thread::sleep(std::time::Duration::from_millis(1/600));
         }
 
-        self.generation = self.generation.wrapping_add(1);
+        self.generation = (self.generation + 1)%255;
     }
 }

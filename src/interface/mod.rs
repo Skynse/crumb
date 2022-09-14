@@ -1,6 +1,7 @@
 use crate::engine::species::SPECIES_COUNT;
-use crate::engine::{Engine, species, Cell, self, World};
+use crate::engine::{Engine, species, Cell, World};
 
+use sdl2::rect::Point;
 use sdl2::render::Texture;
 use sdl2::{pixels::PixelFormatEnum};
 use sdl2::{pixels::Color, rect::Rect, render::Canvas};
@@ -52,7 +53,7 @@ impl Interface {
         let cell_species: &[Species] = &Species::all();
 
         let mut selected_index: usize = 2;
-        let mut cursor_size = 3;
+        let mut cursor_size:i32 = 3;
 
         let mut paused: bool = false;
         let mut ctrl_pressed: bool = false;
@@ -130,7 +131,7 @@ impl Interface {
                     sdl2::event::Event::MouseWheel { y, .. } => {
                       
                         if y > 0 {
-                            cursor_size = (cursor_size + 1).min(MAX_CURSOR_SIZE);
+                            cursor_size = (cursor_size + 1).min(MAX_CURSOR_SIZE as i32);
                         } else {
                             cursor_size = (cursor_size - 1).max(1);
                         }
@@ -159,19 +160,40 @@ impl Interface {
             let mouse_x = mouse_state.x() /2;
             let mouse_y = mouse_state.y()/2;
             
-            
-
             if mouse_state.left() {
 
                 if is_in_window(mouse_x, mouse_y, (WIDTH) as i32, (HEIGHT) as i32) {
-                    for y in 0..cursor_size {
-                        for x in 0..cursor_size {
-                            // draw to the center of the cursor
-                            engine_.world.set(
-                                ((mouse_x  as i32) as usize + x).saturating_sub(cursor_size / 2),
-                                ((mouse_y as i32) as usize + y).saturating_sub(cursor_size / 2),
-                                Cell::new(cell_species[selected_index]),
-                            );
+                    let size = cursor_size;
+                    let radius: f64 = (size as f64) / 2.0;
+            
+                    let floor = (radius + 1.0) as i32;
+                    let ciel = (radius + 1.5) as i32;
+            
+                    // draw the elements as a circle
+                    for dx in -floor..ciel {
+                        for dy in -floor..ciel {
+                            if (((dx * dx) + (dy * dy)) as f64) > (radius * radius) {
+                                continue;
+                            };
+                            let px = mouse_x + dx;
+                            let py = mouse_y + dy;
+                            let i = engine_.world.get_index(px, py);
+            
+                            if px < 0 || px > (WIDTH - UI_X) as i32 - 1 || py < 0 || py > (HEIGHT-UI_Y) as i32 - 1 {
+                                continue;
+                            }
+                            if engine_.world.get(px as usize, py as usize).species == Species::EMPT || cell_species[selected_index] == Species::EMPT {
+                                engine_.world.cells[i] = Cell {
+                                    species: cell_species[selected_index],
+                                    ra: 60
+                                        + (size as u8)
+                                        + (engine_.world.rng.gen::<f32>() * 30.) as u8
+                                        + ((engine_.world.generation % 127) as i8 - 60).abs() as u8,
+                                    rb: 1,
+                                    clock: engine_.world.generation,
+   
+                                }
+                            }
                         }
                     }
                     
@@ -180,20 +202,24 @@ impl Interface {
             }
             canvas.set_draw_color(Color::RGB(255, 255, 255));
             // draw the cursor
-            canvas
-                .draw_rect(sdl2::rect::Rect::new(
-                    mouse_x - cursor_size as i32/ 2,
-                    mouse_y - cursor_size as i32 / 2,
-                    cursor_size as u32,
-                    cursor_size as u32,
-                ))
-                .expect("Failed to draw cursor");
+           // draw the cursor as a  thin outlinecirle
+            for dx in -cursor_size..cursor_size {
+                for dy in -cursor_size..cursor_size {
+                    if (((dx * dx) + (dy * dy)) as f64) > ((cursor_size * cursor_size) as f64) {
+                        continue;
+                    };
+                    let px = mouse_x + dx;
+                    let py = mouse_y + dy;
 
-            // print temperature of cell at mouse position
+                    if px < 0 || px > (WIDTH - UI_X) as i32 - 1 || py < 0 || py > (HEIGHT-UI_Y) as i32 - 1 {
+                        continue;
+                    }
+                    if engine_.world.get(px as usize, py as usize).species == Species::EMPT || cell_species[selected_index] == Species::EMPT {
+                        canvas.draw_point(Point::new(px as i32, py as i32)).unwrap();
+                    }
+                }
+            }
             let cell = engine_.world.get(mouse_x as usize, mouse_y as usize);
-            // use let binding to avoid borrowing issues
-            
-            
 
             // draw selected cell at the end of the screen
             draw_text(&mut canvas, &font, format!("{:?}", cell_species[selected_index]).as_str(), vwidth as i32 - UI_X as i32, 0);
@@ -278,7 +304,7 @@ impl Interface {
             selected_index = draw_scrollbar(&mut canvas, &font, 0, vheight as i32 -UI_Y as i32, vwidth-UI_X as u32, UI_Y as u32, selected_index, cell_species, (mouse_x, mouse_y), mouse_left_clicked);
 
             let end_time = std::time::Instant::now();
-            let fps_text = format!("{:?}, Temp: {} C, FPS: {:.2}",cell.get_species(), cell.get_temperature(), 1.0 / end_time.duration_since(start_time).as_secs_f32());
+            let fps_text = format!("{:?}, Temp: {} C, FPS: {:.2}",cell.get_species(), cell.ra, 1.0 / end_time.duration_since(start_time).as_secs_f32());
             draw_text(&mut canvas, &font, &fps_text.as_str(), (0) as i32,  (0) as i32);
             canvas.present();
         }
@@ -361,8 +387,6 @@ fn draw_world(canvas: &mut Canvas<sdl2::video::Window>, width_: u32, height_:u32
         for x in 0..width_-UI_X as u32 {
             let cell = world.get(x as usize, y as usize);
             let color = cell_to_color(cell);
-            
-
             canvas.set_draw_color(color);
             // draw a pixel using rect
             canvas
