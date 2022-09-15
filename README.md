@@ -1,6 +1,6 @@
 # Crumb
 
-![](git_assets/preview.png)
+![](git_assets/preview1.png)
 
 
 # Dependencies
