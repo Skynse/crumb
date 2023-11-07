@@ -21,19 +21,13 @@ pub struct Cell {
 
 impl Cell {
     pub fn new(species: Species) -> Cell {
-
-        let rb = if species == Species::GOL {
-            1
-        } else {
-            0
-        };
+        let rb = if species == Species::GOL { 1 } else { 0 };
         Cell {
             species: species,
             ra: 100 + rand::thread_rng().gen_range(0..2) * 50 as u8,
             rb: rb,
             clock: 0,
         }
-        
     }
 
     pub fn get_species(&self) -> Species {
@@ -66,7 +60,10 @@ pub struct Wind {
 impl Engine {
     pub fn new() -> Self {
         Engine {
-            world: World::new(defaults::WIDTH as i32 - UI_X as i32, defaults::HEIGHT as i32 - UI_Y as i32),
+            world: World::new(
+                defaults::WIDTH as i32 - UI_X as i32,
+                defaults::HEIGHT as i32 - UI_Y as i32,
+            ),
         }
     }
 }
@@ -200,7 +197,6 @@ impl World {
             Species::WALL => 500,
             Species::GOL => 500,
 
-
             Species::OIL => 50,
             Species::WATR => 50,
 
@@ -231,12 +227,11 @@ impl World {
             api.set(0, 0, EMPTY_CELL);
             if dy == -1
                 && api.get(dx, -2).species == Species::EMPT
-                && (cell.species == Species::SAND 
+                && (cell.species == Species::SAND
                     || cell.species == Species::WATR
                     || cell.species == Species::DUST
                     || cell.species == Species::OIL
-                    || cell.species == Species::GOL
-                )
+                    || cell.species == Species::GOL)
             {
                 dy = -2;
             }
@@ -245,21 +240,20 @@ impl World {
         }
     }
     fn update_cell(cell: Cell, api: Api) {
-        if cell.clock.saturating_sub(api.world.generation)  == 1 {
+        if cell.clock.saturating_sub(api.world.generation) == 1 {
             return;
         }
         cell.update(api);
     }
 }
 
-
 // private methods
 impl World {
     pub fn new(width: i32, height: i32) -> World {
         let rng: SplitMix64 = SeedableRng::seed_from_u64(0x734f6b89de5f83cc);
         World {
-            width: (width - UI_X as i32) /2 as i32,
-            height: (height -  UI_Y as i32) as i32,
+            width: (width - UI_X as i32) / 2 as i32,
+            height: (height - UI_Y as i32) as i32,
             cells: vec![Cell::new(Species::EMPT); defaults::WIDTH * defaults::HEIGHT],
             winds: vec![
                 Wind {
@@ -316,7 +310,7 @@ impl World {
 
     pub fn tick(&mut self) {
         // called every SDL frame
-        
+        /*
         for y in 0..self.height {
             for x in 0..self.width{
                 let cell = self.get_cell(x, y);
@@ -332,8 +326,8 @@ impl World {
                 )
             }
         }
-        
-        self.generation = (self.generation + 1)%255;
+        */
+        self.generation = (self.generation + 1) % 255;
 
         for x in 0..self.width - 1 {
             let scanx = if self.generation % 2 == 0 {
@@ -365,6 +359,6 @@ impl World {
             //std::thread::sleep(std::time::Duration::from_millis(1/600));
         }
 
-        self.generation = (self.generation + 1)%255;
+        self.generation = (self.generation + 1) % 255;
     }
 }
